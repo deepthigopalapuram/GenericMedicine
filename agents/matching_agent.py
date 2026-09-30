@@ -4,7 +4,7 @@ from supabase import create_client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-
+breakpoint()  # Python will automatically pause here and open the (Pdb) prompt in your terminal
 def match_brand_to_generic(supabase_client, search_query: str):
     """
     Searches for a brand name in Supabase using case-insensitive partial matching (ilike)
