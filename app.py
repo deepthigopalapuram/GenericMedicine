@@ -20,12 +20,18 @@ with tab1:
     if search_query:
         with st.spinner("Matching salt safely..."):
             try:
-                match = match_brand_to_generic(supabase, search_query)
-                if match:
+                result = match_brand_to_generic(supabase, search_query)
+                
+                # Check if the result returned a structured error dictionary
+                if isinstance(result, dict) and "error" in result:
+                    st.error("Database Query Failed!")
+                    st.markdown(f"**Attempted Table:** `{result.get('table')}`")
+                    st.markdown(f"**Attempted SQL Filter / Query:** `{result.get('filter')}`")
+                    st.markdown(f"**Exact SQL / API Error Reason:** `{result.get('error')}`")
+                
+                elif result and isinstance(result, list):
                     st.success("Generic Substitute Found!")
-                    # Handle if match returns a list of items or a single dictionary
-                    item = match[0] if isinstance(match, list) and len(match) > 0 else match
-                    
+                    item = result[0]
                     if isinstance(item, dict):
                         st.write(f"**Brand Name:** {item.get('brand_name')}")
                         st.write(f"**Generic Active Salt:** {item.get('generic_name')}")
@@ -37,8 +43,10 @@ with tab1:
                         st.warning("Match returned an unexpected format.")
                 else:
                     st.warning(f"No match found for query: '{search_query}'. Please verify the spelling or check database records.")
+                    
             except Exception as err:
-                st.error(f"Search failed for input '{search_query}'. Exact reason: {err}")
+                st.error(f"Search execution failed for input '{search_query}'.")
+                st.code(str(err), language="text")
 
 with tab2:
     uploaded_file = st.file_uploader("Upload prescription image...", type=["jpg", "jpeg", "png"])
