@@ -22,12 +22,14 @@ with tab1:
             try:
                 result = match_brand_to_generic(supabase, search_query)
                 
-                # Check if the result returned a structured error dictionary
+                # Check if the result returned a diagnostic / error dictionary
                 if isinstance(result, dict) and "error" in result:
-                    st.error("Database Query Failed!")
+                    st.warning("Query Executed, but No Match / Diagnostic Info:")
                     st.markdown(f"**Attempted Table:** `{result.get('table')}`")
-                    st.markdown(f"**Attempted SQL Filter / Query:** `{result.get('filter')}`")
-                    st.markdown(f"**Exact SQL / API Error Reason:** `{result.get('error')}`")
+                    st.markdown(f"**Query Filter Applied:** `{result.get('filter') or result.get('filter_tried')}`")
+                    st.markdown(f"**Detailed Reason / Error:** `{result.get('error')}`")
+                    if "response_data" in result:
+                        st.write(f"Raw Supabase Response Data: `{result.get('response_data')}`")
                 
                 elif result and isinstance(result, list):
                     st.success("Generic Substitute Found!")
@@ -42,10 +44,10 @@ with tab1:
                     else:
                         st.warning("Match returned an unexpected format.")
                 else:
-                    st.warning(f"No match found for query: '{search_query}'. Please verify the spelling or check database records.")
+                    st.warning(f"No match found for query: '{search_query}'.")
                     
             except Exception as err:
-                st.error(f"Search execution failed for input '{search_query}'.")
+                st.error(f"Search execution crashed.")
                 st.code(str(err), language="text")
 
 with tab2:
