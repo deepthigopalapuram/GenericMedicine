@@ -11,8 +11,8 @@ def extract_text_from_image(image_bytes):
     ocr = load_ocr_model()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    # Performance optimization: Downscale high-res images
+    
+    # Performance Optimization: Downscale image width to 1000px max
     height, width = img.shape[:2]
     if width > 1000:
         new_width = 1000
@@ -23,9 +23,9 @@ def extract_text_from_image(image_bytes):
     processed = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
                                       cv2.THRESH_BINARY, 11, 2)
     result = ocr.ocr(processed, cls=True)
-
+    
     extracted_items = []
-    CONFIDENCE_THRESHOLD = 0.80 # Safety safeguard
+    CONFIDENCE_THRESHOLD = 0.80  # Safety guardrail against hallucinations
     if result and result[0]:
         for line in result[0]:
             text = line[1][0]
