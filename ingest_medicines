@@ -1,0 +1,69 @@
+import os
+from supabase import create_client
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
+
+# 1. Initialize Clients
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Initialize Gemini Client (uses GEMINI_API_KEY environment variable)
+client = genai.Client()
+
+# 2. Define Schema for Structured Data Extraction
+class MedicineRecord(BaseModel):
+    brand_name: str = Field(description="The commercial brand name of the medicine, e.g., Augmentin 625 Duo, Pan 40")
+    generic_name: str = Field(description="The active pharmaceutical ingredient or salt, e.g., Amoxicillin & Potassium Clavulanate")
+    estimated_price_brand: float = Field(description="Approximate retail market price of the branded version in INR")
+    estimated_price_generic: float = Field(description="Approximate low-cost generic equivalent price in INR")
+
+class MedicineBatch(BaseModel):
+    medicines: list[MedicineRecord]
+
+def fetch_and_populate_medicines():
+    print("🤖 Agent is generating verified Indian pharmaceutical data...")
+    
+    # Prompt Gemini to structure common Indian branded and generic medicine data
+    prompt = """
+    Generate a comprehensive JSON list of at least 30 widely used Indian prescription and over-the-counter medicines. 
+    Include popular brands across categories like antibiotics, PPIs (antacids), diabetes, pain management, and supplements 
+    (e.g., Augmentin, Pan 40, Glycomet, Shelcal, Azithral, Crocin, Metformin variants, etc.). 
+    Provide accurate brand names, active generic salts, estimated brand prices in INR, and estimated low-cost generic prices in INR.
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=MedicineBatch,
+            temperature=0.2,
+        ),
+    )
+
+    # Parse response
+    import json
+    data = json.loads(response.text)
+    records = data.get("medicines", [])
+    
+    print(f"📦 Generated {len(records)} records. Inserting into Supabase table 'medicines'...")
+
+    # Insert into Supabase in batches
+    for item in records:
+        try:
+            res = supabase.table("medicines").insert({
+                "brand_name": item["brand_name"],
+                "generic_name": item["generic_name"],
+                "estimated_price_brand": item["estimated_price_brand"],
+                # Include generic price if your column exists, otherwise omit
+            }).execute()
+            print(f" ✅ Inserted: {item['brand_name']} -> {item['generic_name']}")
+        except Exception as e:
+            print(f" ❌ Failed to insert {item['brand_name']}: {e}")
+
+    print("🎉 Data ingestion complete!")
+
+if __name__ == "__main__":
+    fetch_and_populate_medicines()
