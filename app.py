@@ -19,17 +19,26 @@ with tab1:
     search_query = st.text_input("Enter Brand Name (e.g., Augmentin, Pan 40):")
     if search_query:
         with st.spinner("Matching salt safely..."):
-            match = match_brand_to_generic(supabase, search_query)
-            if match:
-                st.success("Generic Substitute Found!")
-                st.write(f"**Brand Name:** {match['brand_name']}")
-                st.write(f"**Generic Active Salt:** {match['generic_name']}")
-                st.write(f"**Estimated Brand Price:** ₹{match['estimated_price_brand']}")
-                st.write(f"**Estimated Generic Price:** ₹{match['estimated_price_generic']}")
-                savings = match['estimated_price_brand'] - match['estimated_price_generic']
-                st.info(f"Estimated Savings: ~₹{savings} per strip!")
-            else:
-                st.warning("No exact or fuzzy match found. Please verify the spelling.")
+            try:
+                match = match_brand_to_generic(supabase, search_query)
+                if match:
+                    st.success("Generic Substitute Found!")
+                    # Handle if match returns a list of items or a single dictionary
+                    item = match[0] if isinstance(match, list) and len(match) > 0 else match
+                    
+                    if isinstance(item, dict):
+                        st.write(f"**Brand Name:** {item.get('brand_name')}")
+                        st.write(f"**Generic Active Salt:** {item.get('generic_name')}")
+                        st.write(f"**Estimated Brand Price:** ₹{item.get('estimated_price_brand')}")
+                        st.write(f"**Estimated Generic Price:** ₹{item.get('estimated_price_generic')}")
+                        savings = item.get('estimated_price_brand', 0) - item.get('estimated_price_generic', 0)
+                        st.info(f"Estimated Savings: ~₹{savings} per strip!")
+                    else:
+                        st.warning("Match returned an unexpected format.")
+                else:
+                    st.warning(f"No match found for query: '{search_query}'. Please verify the spelling or check database records.")
+            except Exception as err:
+                st.error(f"Search failed for input '{search_query}'. Exact reason: {err}")
 
 with tab2:
     uploaded_file = st.file_uploader("Upload prescription image...", type=["jpg", "jpeg", "png"])
@@ -53,24 +62,18 @@ with col2:
 
 if st.button("Locate Nearest Stores"):
     with st.spinner("Calculating via PostGIS spatial router..."):
-        stores, found_radius = find_nearest_stores_safely(supabase, user_lat, user_lon)
-        if stores:
-            st.success(f"Found {len(stores)} store(s) within {found_radius/1000} km radius!")
-            for store in stores:
-                st.write(f"🏪 **{store['store_name']}** — {store['address']} (Distance: {round(store['distance_meters']/1000, 2)} km)")
-        else:
-            st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
-# --- YOUR CORE APP LOGIC (Untouched) ---
-search_query = st.text_input(
-    "Enter Brand Name (e.g., Augmentin, Pan 40):", 
-    key="manual_brand_search_input"
-)
-if search_query:
-    # Your clean production function call here
-    pass
+        try:
+            stores, found_radius = find_nearest_stores_safely(supabase, user_lat, user_lon)
+            if stores:
+                st.success(f"Found {len(stores)} store(s) within {found_radius/1000} km radius!")
+                for store in stores:
+                    st.write(f"🏪 **{store['store_name']}** — {store['address']} (Distance: {round(store['distance_meters']/1000, 2)} km)")
+            else:
+                st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
+        except Exception as locator_err:
+            st.error(f"Store lookup failed. Exact reason: {locator_err}")
 
-
-# --- ISOLATED DEBUG BLOCK (Put this at the bottom of app.py) ---
+# --- ISOLATED DEBUG BLOCK ---
 with st.expander("🛠️ Developer Sandbox & Raw Data Inspector"):
     st.write("This block runs completely separate from the main search engine.")
     if st.button("Test Raw Supabase Connection"):
