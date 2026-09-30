@@ -60,3 +60,20 @@ if st.button("Locate Nearest Stores"):
                 st.write(f"🏪 **{store['store_name']}** — {store['address']} (Distance: {round(store['distance_meters']/1000, 2)} km)")
         else:
             st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
+# --- YOUR CORE APP LOGIC (Untouched) ---
+search_query = st.text_input("Enter Brand Name (e.g., Augmentin, Pan 40):")
+if search_query:
+    # Your clean production function call here
+    pass
+
+
+# --- ISOLATED DEBUG BLOCK (Put this at the bottom of app.py) ---
+with st.expander("🛠️ Developer Sandbox & Raw Data Inspector"):
+    st.write("This block runs completely separate from the main search engine.")
+    if st.button("Test Raw Supabase Connection"):
+        try:
+            raw_res = supabase.table("medicines").select("*").limit(3).execute()
+            st.success("Connection successful!")
+            st.json(raw_res.data)
+        except Exception as err:
+            st.error(f"Connection error: {err}")
