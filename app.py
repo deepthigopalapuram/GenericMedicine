@@ -81,7 +81,7 @@ if st.button("Locate Nearest Stores"):
             else:
                 st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
         except Exception as locator_err:
-            st.error(f"Store lookup failed. Exact reason: {locator_err}"
+            st.error(f"Store lookup failed. Exact reason: {locator_err}")
 
 # --- ISOLATED DEBUG BLOCK ---
 with st.expander("🛠️ Developer Sandbox & Raw Data Inspector"):
