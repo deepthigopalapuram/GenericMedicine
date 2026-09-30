@@ -129,7 +129,7 @@ with st.expander("🤖 Admin Agent: Auto-Populate Database"):
                 """
 
                 response = client.models.generate_content(
-                    model="gemini-1.5-flash",
+                    model="gemini-2.5-pro",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
