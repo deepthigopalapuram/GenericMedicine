@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from supabase import create_client
 from agents.ocr_agent import extract_text_from_image
