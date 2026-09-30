@@ -4,7 +4,7 @@ from supabase import create_client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-breakpoint()  # Python will automatically pause here and open the (Pdb) prompt in your terminal
+
 def match_brand_to_generic(supabase_client, search_query: str):
     """
     Searches for a brand name in Supabase using case-insensitive partial matching (ilike)
@@ -40,4 +40,21 @@ def match_brand_to_generic(supabase_client, search_query: str):
             return fallback_response.data
 
     # Return empty list if no matches are found
+    # 2. Fallback: If multi-word query, try searching by the first primary keyword
+    words = query_cleaned.split()
+    if len(words) > 1:
+        primary_word = words[0]
+        try:
+            fallback_response = (
+                supabase_client.table("medicines")
+                .select("*")
+                .ilike("brand_name", f"%{primary_word}%")
+                .execute()
+            )
+            if fallback_response.data and len(fallback_response.data) > 0:
+                return fallback_response.data
+        except Exception as e:
+            print(f"Fallback query failed: {e}")
+         
+   
     return []
