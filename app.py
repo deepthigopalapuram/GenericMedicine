@@ -81,7 +81,7 @@ if st.button("Locate Nearest Stores"):
             else:
                 st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
         except Exception as locator_err:
-            st.error(f"Store lookup failed. Exact reason: {locator_err}")
+            st.error(f"Store lookup failed. Exact reason: {locator_err}"
 
 # --- ISOLATED DEBUG BLOCK ---
 with st.expander("🛠️ Developer Sandbox & Raw Data Inspector"):
@@ -93,3 +93,65 @@ with st.expander("🛠️ Developer Sandbox & Raw Data Inspector"):
             st.json(raw_res.data)
         except Exception as err:
             st.error(f"Connection error: {err}")
+
+# --- YOUR EXISTING APP CODE ABOVE ---
+# (Search inputs, results display, maps, etc.)
+
+
+# --- ADD THE AUTO-POPULATE AGENT BLOCK HERE AT THE BOTTOM ---
+import json
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
+
+class MedicineRecord(BaseModel):
+    brand_name: str = Field(description="Commercial brand name of the medicine, e.g., Augmentin 625 Duo, Pan 40")
+    generic_name: str = Field(description="Active pharmaceutical ingredient or salt")
+    estimated_price_brand: float = Field(description="Approximate retail brand price in INR")
+
+class MedicineBatch(BaseModel):
+    medicines: list[MedicineRecord]
+
+with st.expander("🤖 Admin Agent: Auto-Populate Database"):
+    st.write("Clicking this button will instruct the Gemini agent to generate a fresh batch of Indian pharmaceutical records and write them straight to your Supabase `medicines` table.")
+    
+    if st.button("Run Auto-Ingestion Agent"):
+        with st.spinner("Agent is generating and inserting medicine records..."):
+            try:
+                # Initialize Gemini client securely using your environment secrets or keys
+                client = genai.Client(api_key=st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY")))
+                
+                prompt = """
+                Generate a JSON list of 30 widely used Indian prescription and over-the-counter medicines 
+                across antibiotics, PPIs, diabetes, pain management, and supplements (e.g., Augmentin 625 Duo, Pan 40, Glycomet-GP 1, Shelcal 500, Azithral 500). 
+                Provide accurate brand names, active generic salts, and estimated brand prices in INR.
+                """
+
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=MedicineBatch,
+                        temperature=0.2,
+                    ),
+                )
+
+                data = json.loads(response.text)
+                records = data.get("medicines", [])
+                
+                success_count = 0
+                for item in records:
+                    # Insert directly using your active supabase client
+                    supabase.table("medicines").upsert({
+                        "brand_name": item["brand_name"],
+                        "generic_name": item["generic_name"],
+                        "estimated_price_brand": item["estimated_price_brand"]
+                    }, on_conflict="brand_name").execute()
+                    success_count += 1
+                
+                st.success(f"Successfully populated {success_count} medicine records into Supabase via the agent!")
+                st.balloons()
+                
+            except Exception as e:
+                st.error(f"Agent ingestion failed: {e}")
