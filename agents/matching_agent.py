@@ -20,14 +20,17 @@ def match_brand_to_generic(supabase_client, search_query: str):
 
     query_cleaned = search_query.strip()
     target_table = "medicines"
-    filter_desc = f"ilike brand_name %{query_cleaned}%"
+    
+    # Properly format wildcard string for Supabase ilike
+    wildcard_query = f"%{query_cleaned}%"
+    filter_desc = f"ilike brand_name {wildcard_query}"
     
     try:
         # 1. Try a case-insensitive partial match on the full query string
         response = (
             supabase_client.table(target_table)
             .select("*")
-            .ilike("brand_name", f"%{query_cleaned}%")
+            .ilike("brand_name", wildcard_query)
             .execute()
         )
         
@@ -38,11 +41,13 @@ def match_brand_to_generic(supabase_client, search_query: str):
         words = query_cleaned.split()
         if len(words) > 1:
             primary_word = words[0]
-            fallback_filter = f"ilike brand_name %{primary_word}%"
+            fallback_wildcard = f"%{primary_word}%"
+            fallback_filter = f"ilike brand_name {fallback_wildcard}"
+            
             fallback_response = (
                 supabase_client.table(target_table)
                 .select("*")
-                .ilike("brand_name", f"%{primary_word}%")
+                .ilike("brand_name", fallback_wildcard)
                 .execute()
             )
             if fallback_response.data and len(fallback_response.data) > 0:
