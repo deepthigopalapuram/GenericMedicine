@@ -7,3 +7,4 @@ pydantic
 python-dotenv
 requests
 google-genai
+opencv-python-headless
