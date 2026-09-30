@@ -61,7 +61,10 @@ if st.button("Locate Nearest Stores"):
         else:
             st.warning("No generic stores found within the maximum radius. Please check back later as our database updates.")
 # --- YOUR CORE APP LOGIC (Untouched) ---
-search_query = st.text_input("Enter Brand Name (e.g., Augmentin, Pan 40):")
+search_query = st.text_input(
+    "Enter Brand Name (e.g., Augmentin, Pan 40):", 
+    key="manual_brand_search_input"
+)
 if search_query:
     # Your clean production function call here
     pass
